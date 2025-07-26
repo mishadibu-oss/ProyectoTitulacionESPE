@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Animal Flashcard Game</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #eef;
+      text-align: center;
+      padding: 20px;
+    }
+
+    h1 {
+      color: #333;
+    }
+
+    #cardContainer {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 15px;
+      margin-top: 20px;
+    }
+
+    .card {
+      width: 100px;
+      height: 100px;
+      background-color: white;
+      border: 2px solid #555;
+      border-radius: 8px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      font-weight: bold;
+      cursor: pointer;
+      position: relative;
+    }
+
+    .card.correct::after {
+      content: "✅";
+      position: absolute;
+      top: 5px;
+      right: 5px;
+      font-size: 24px;
+    }
+
+    .card.incorrect::after {
+      content: "❌";
+      position: absolute;
+      top: 5px;
+      right: 5px;
+      font-size: 24px;
+    }
+
+    #quizModal {
+      display: none;
+      background-color: white;
+      padding: 20px;
+      border-radius: 12px;
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      box-shadow: 0 0 15px rgba(0,0,0,0.3);
+      z-index: 999;
+    }
+
+    #quizModal img {
+      width: 200px;
+      height: 200px;
+      object-fit: contain;
+      margin-bottom: 15px;
+    }
+
+    .option-btn {
+      display: block;
+      margin: 10px auto;
+      padding: 10px 20px;
+      font-size: 16px;
+      border: 2px solid #333;
+      border-radius: 6px;
+      background-color: #f9f9f9;
+      cursor: pointer;
+    }
+
+    #feedback {
+      font-weight: bold;
+      margin-top: 10px;
+    }
+
+    #overlay {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      background: rgba(0,0,0,0.4);
+      display: none;
+      z-index: 998;
+    }
+
+    #closeBtn {
+      margin-top: 10px;
+      cursor: pointer;
+      color: blue;
+      text-decoration: underline;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>Animal Flashcard Game</h1>
+  <div id="cardContainer"></div>
+
+  <div id="overlay"></div>
+
+  <div id="quizModal">
+    <img id="quizImage" src="" alt="Animal">
+    <div id="options"></div>
+    <div id="feedback"></div>
+    <div id="closeBtn">← Back to cards</div>
+  </div>
+
+  <script>
+    const animals = [
+      { name: "Cat", image: "https://openmoji.org/data/color/svg/1F408.svg", options: ["Dog", "Cat", "Mouse"], explanation: "This is a cat." },
+      { name: "Dog", image: "https://openmoji.org/data/color/svg/1F415.svg", options: ["Rabbit", "Dog", "Horse"], explanation: "This is a dog." },
+      { name: "Fox", image: "https://openmoji.org/data/color/svg/1F98A.svg", options: ["Wolf", "Tiger", "Fox"], explanation: "This is a fox." },
+      { name: "Mouse", image: "https://openmoji.org/data/color/svg/1F42D.svg", options: ["Rat", "Hamster", "Mouse"], explanation: "This is a mouse." },
+      { name: "Cow", image: "https://openmoji.org/data/color/svg/1F42E.svg", options: ["Pig", "Cow", "Sheep"], explanation: "This is a cow." },
+      { name: "Tiger", image: "https://openmoji.org/data/color/svg/1F42F.svg", options: ["Tiger", "Lion", "Leopard"], explanation: "This is a tiger." },
+      { name: "Pig", image: "https://openmoji.org/data/color/svg/1F437.svg", options: ["Pig", "Cow", "Dog"], explanation: "This is a pig." },
+      { name: "Rabbit", image: "https://openmoji.org/data/color/svg/1F430.svg", options: ["Rabbit", "Cat", "Hamster"], explanation: "This is a rabbit." },
+      { name: "Monkey", image: "https://openmoji.org/data/color/svg/1F412.svg", options: ["Monkey", "Gorilla", "Bear"], explanation: "This is a monkey." },
+      { name: "Bear", image: "https://openmoji.org/data/color/svg/1F43B.svg", options: ["Lion", "Bear", "Dog"], explanation: "This is a bear." },
+      // Añade hasta 20 duplicando o creando más animales reales
+      { name: "Lion", image: "https://openmoji.org/data/color/svg/1F981.svg", options: ["Lion", "Tiger", "Wolf"], explanation: "This is a lion." },
+      { name: "Elephant", image: "https://openmoji.org/data/color/svg/1F418.svg", options: ["Hippo", "Rhino", "Elephant"], explanation: "This is an elephant." },
+      { name: "Horse", image: "https://openmoji.org/data/color/svg/1F434.svg", options: ["Horse", "Cow", "Deer"], explanation: "This is a horse." },
+      { name: "Panda", image: "https://openmoji.org/data/color/svg/1F43C.svg", options: ["Panda", "Bear", "Koala"], explanation: "This is a panda." },
+      { name: "Frog", image: "https://openmoji.org/data/color/svg/1F438.svg", options: ["Frog", "Turtle", "Fish"], explanation: "This is a frog." },
+      { name: "Koala", image: "https://openmoji.org/data/color/svg/1F428.svg", options: ["Koala", "Bear", "Cat"], explanation: "This is a koala." },
+      { name: "Whale", image: "https://openmoji.org/data/color/svg/1F40B.svg", options: ["Shark", "Whale", "Dolphin"], explanation: "This is a whale." },
+      { name: "Dolphin", image: "https://openmoji.org/data/color/svg/1F42C.svg", options: ["Fish", "Shark", "Dolphin"], explanation: "This is a dolphin." },
+      { name: "Penguin", image: "https://openmoji.org/data/color/svg/1F427.svg", options: ["Duck", "Penguin", "Chicken"], explanation: "This is a penguin." },
+      { name: "Chicken", image: "https://openmoji.org/data/color/svg/1F414.svg", options: ["Chicken", "Duck", "Goose"], explanation: "This is a chicken." }
+    ];
+
+    const cardContainer = document.getElementById('cardContainer');
+    const quizModal = document.getElementById('quizModal');
+    const quizImage = document.getElementById('quizImage');
+    const options = document.getElementById('options');
+    const feedback = document.getElementById('feedback');
+    const overlay = document.getElementById('overlay');
+    const closeBtn = document.getElementById('closeBtn');
+
+    let currentCardIndex = null;
+
+    animals.forEach((animal, index) => {
+      const card = document.createElement('div');
+      card.className = 'card';
+      card.textContent = `Card ${index + 1}`;
+      card.dataset.index = index;
+      cardContainer.appendChild(card);
+    });
+
+    cardContainer.addEventListener('click', e => {
+      if (e.target.classList.contains('card')) {
+        currentCardIndex = parseInt(e.target.dataset.index);
+        showQuiz(currentCardIndex);
+      }
+    });
+
+    function showQuiz(index) {
+      const animal = animals[index];
+      quizImage.src = animal.image;
+      feedback.textContent = "";
+      options.innerHTML = "";
+
+      animal.options.forEach(opt => {
+        const btn = document.createElement('button');
+        btn.className = 'option-btn';
+        btn.textContent = opt;
+        btn.onclick = () => checkAnswer(opt, animal.name, animal.explanation);
+        options.appendChild(btn);
+      });
+
+      quizModal.style.display = 'block';
+      overlay.style.display = 'block';
+    }
+
+    function checkAnswer(selected, correct, explanation) {
+      const card = document.querySelectorAll('.card')[currentCardIndex];
+      if (selected === correct) {
+        feedback.style.color = 'green';
+        feedback.textContent = "✅ Correct!";
+        card.classList.remove('incorrect');
+        card.classList.add('correct');
+      } else {
+        feedback.style.color = 'red';
+        feedback.textContent = `❌ Wrong. ${explanation}`;
+        card.classList.add('incorrect');
+      }
+    }
+
+    closeBtn.onclick = () => {
+      quizModal.style.display = 'none';
+      overlay.style.display = 'none';
+    };
+  </script>
+
+</body>
+</html>
